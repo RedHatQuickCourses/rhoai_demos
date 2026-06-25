@@ -1,9 +1,0 @@
-apiVersion: trustyai.opendatahub.io/v1alpha1
-kind: EvalHub
-metadata:
-  name: evalhub
-spec:
-  database:
-    type: sqlite
-  providers:
-    - garak
