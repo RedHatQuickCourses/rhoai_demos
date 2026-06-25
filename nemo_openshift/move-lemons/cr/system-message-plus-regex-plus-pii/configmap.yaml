@@ -4,8 +4,9 @@ metadata:
   name: lemonade-config
 data:
   config.yaml: |
-    # NeMo Guardrails Configuration for Lemonade Stand with Regex
+    # NeMo Guardrails Configuration for Lemonade Stand with Regex + PII Detection
     # Backend-only setup with Phi-4 model
+    # Presidio: PII detection (input & output)
 
     models:
       - type: main
@@ -35,7 +36,7 @@ data:
 
           Language rule: Respond only in English. If the user writes in another language, refuse and ask them to rephrase in English.
 
-    # Rails configured - this is a basic chat endpoint with guardrails
+    # Rails configured - multiple layers of protection
     rails:
       config:
         # Regex detection configuration
@@ -44,9 +45,43 @@ data:
             patterns:
               - "password|secret|api[_-]?key|token"
             case_insensitive: true
+        # PII detection configuration using Presidio
+        sensitive_data_detection:
+          input:
+            score_threshold: 0.4
+            entities:
+              - PERSON
+              - EMAIL_ADDRESS
+              - PHONE_NUMBER
+              - CREDIT_CARD
+              - US_SSN
+              - LOCATION
+
+          output:
+            score_threshold: 0.4
+            entities:
+              - PERSON
+              - EMAIL_ADDRESS
+              - PHONE_NUMBER
+              - CREDIT_CARD
+              - US_SSN
+              - LOCATION
+
       input:
         flows:
           - regex check input
+          - detect sensitive data on input
+
+      output:
+        flows:
+          - detect sensitive data on output
 
   rails.co: |
-    # Using built-in rails only
+    # Using built-in flows from NeMo library with custom refusal messages
+    # Layer 1: Regex detection on input
+    # Layer 2: PII detection on input (Presidio)
+    # Layer 3: PII detection on output (Presidio)
+
+    # Custom refusal message for PII detection (overriding default)
+    define bot inform answer unknown
+      "🔒 Sensitive information detected. For your privacy and security, I cannot process requests containing personal data. Please ask me about lemons without sharing any personal information."
