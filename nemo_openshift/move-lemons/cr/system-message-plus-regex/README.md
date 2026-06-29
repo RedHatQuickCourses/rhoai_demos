@@ -25,7 +25,7 @@ echo "NeMo Guardrails URL: https://$NEMO_ROUTE"
 ### Test 1: Basic Lemon Question (Should Work)
 
 ```bash
-curl -X POST "https://$NEMO_ROUTE/v1/chat/completions" \
+curl -s -X POST "https://$NEMO_ROUTE/v1/chat/completions" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "'"$LLM_MODEL_NAME"'",
@@ -60,7 +60,7 @@ should return something along the lines of:
 ### Test 2: Off-Topic Question (Should Refuse)
 
 ```bash
-curl -X POST "https://$NEMO_ROUTE/v1/chat/completions" \
+curl -s -X POST "https://$NEMO_ROUTE/v1/chat/completions" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "'"$LLM_MODEL_NAME"'",

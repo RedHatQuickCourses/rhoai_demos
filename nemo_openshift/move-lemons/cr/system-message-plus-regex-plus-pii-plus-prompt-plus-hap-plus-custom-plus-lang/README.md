@@ -6,15 +6,24 @@ export LLM_API_BASE="https://your-llm-endpoint.com/v1"
 export LLM_MODEL_NAME="your-model-name"
 export LLM_API_KEY="your-api-key"
 
-export INJECTION_GUARD_API_BASE="https://your-guard-endpoint.com/v1"
-export INJECTION_GUARD_MODEL_NAME="your-guard-model"
-export INJECTION_GUARD_API_KEY="your-guard-api-key"
+export INJECTION_GUARD_API_BASE="https://your-injection-guard-endpoint.com/v1"
+export INJECTION_GUARD_MODEL_NAME="your-injection-guard-model"
+export INJECTION_GUARD_API_KEY="your-injection-guard-api-key"
+
+export HAP_GUARD_API_BASE="https://your-hap-guard-endpoint.com/v1"
+export HAP_GUARD_MODEL_NAME="your-hap-guard-model"
+export HAP_GUARD_API_KEY="your-hap-guard-api-key"
+```
+
+Deploy the language detector service first:
+```bash
+oc apply -f language-detector.yaml
 ```
 
 Deploy with envsubst:
 ```bash
 envsubst < secret.yaml | oc apply -f -
-envsubst '${LLM_API_BASE} ${LLM_MODEL_NAME} ${LLM_API_KEY} ${INJECTION_GUARD_API_BASE} ${INJECTION_GUARD_MODEL_NAME} ${INJECTION_GUARD_API_KEY}' < configmap.yaml | oc apply -f -
+envsubst '${LLM_API_BASE} ${LLM_MODEL_NAME} ${LLM_API_KEY} ${INJECTION_GUARD_API_BASE} ${INJECTION_GUARD_MODEL_NAME} ${INJECTION_GUARD_API_KEY} ${HAP_GUARD_API_BASE} ${HAP_GUARD_MODEL_NAME} ${HAP_GUARD_API_KEY}' < configmap.yaml | oc apply -f -
 oc apply -f nemo.yaml
 ```
 
@@ -64,6 +73,64 @@ should return something along the lines of:
 ### Test 2: Off-Topic Question (Should Refuse)
 
 ```bash
+curl -s -X POST "https://$NEMO_ROUTE/v1/guardrail/checks" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "'"$LLM_MODEL_NAME"'",
+    "messages": [{"role":"user","content":"Tell me about oranges"}]
+  }' | jq
+```
+
+should return something along the lines of:
+
+```json
+{
+  "status": "blocked",
+  "rails_status": {
+    "check message length": {
+      "status": "success"
+    },
+    "check forbidden words": {
+      "status": "blocked"
+    }
+  },
+  "messages": [
+    {
+      "index": 0,
+      "role": "user",
+      "rails": {
+        "check message length": {
+          "status": "success"
+        },
+        "check forbidden words": {
+          "status": "blocked"
+        }
+      }
+    }
+  ],
+  "guardrails_data": {
+    "log": {
+      "activated_rails": [
+        "check forbidden words"
+      ],
+      "stats": {
+        "input_rails_duration": 0.03030705451965332,
+        "dialog_rails_duration": null,
+        "generation_rails_duration": null,
+        "output_rails_duration": null,
+        "total_duration": 0.0330958366394043,
+        "llm_calls_duration": 0,
+        "llm_calls_count": 0,
+        "llm_calls_total_prompt_tokens": 0,
+        "llm_calls_total_completion_tokens": 0,
+        "llm_calls_total_tokens": 0
+      }
+    }
+  }
+}
+```
+
+```bash
 curl -s -X POST "https://$NEMO_ROUTE/v1/chat/completions" \
   -H "Content-Type: application/json" \
   -d '{
@@ -76,19 +143,19 @@ should return something along the lines of:
 
 ```json
 {
-  "id": "chatcmpl-ed2d32bc-aa0a-49da-813c-ae3cb7077974",
+  "id": "chatcmpl-29f6d391-a12d-4f67-bff8-e728f8a1b7d9",
   "choices": [
     {
       "finish_reason": "stop",
       "index": 0,
       "message": {
-        "content": "I'm sorry, but I can only provide information about lemons. If you'd like to know about the cultivation, varieties, storage, preparation, uses, safety, history, science, or lemon-based recipes, feel free to ask about those topics!",
+        "content": "🍊 I noticed you mentioned other fruits or non-lemon topics. I'm specialized exclusively in lemons! Please ask me about lemons only.",
         "role": "assistant"
       }
     }
   ],
-  "created": 1772218193,
-  "model": "microsoft/phi-4",
+  "created": 1782743016,
+  "model": "microsoft-phi-4",
   "object": "chat.completion",
   "guardrails": {
     "config_id": "lemonade-stand"
@@ -359,6 +426,287 @@ which should return something along the lines of:
     }
   ],
   "created": 1772219005,
+  "model": "microsoft/phi-4",
+  "object": "chat.completion",
+  "guardrails": {
+    "config_id": "lemonade-stand"
+  }
+}
+```
+
+### Test 6: Profanity (Should Block with HAP Guard)
+
+```bash
+curl -s -X POST "https://$NEMO_ROUTE/v1/guardrail/checks" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "'"$LLM_MODEL_NAME"'",
+    "messages": [{"role":"user","content":"You fricking chode, this is bloody ridiculous"}]
+  }' | jq
+```
+
+```json
+{
+  "status": "blocked",
+  "rails_status": {
+    "regex check input": {
+      "status": "success"
+    },
+    "self check input": {
+      "status": "success"
+    },
+    "detect sensitive data on input": {
+      "status": "success"
+    },
+    "content safety check input $model=content_safety": {
+      "status": "blocked"
+    }
+  },
+  "messages": [
+    {
+      "index": 0,
+      "role": "user",
+      "rails": {
+        "regex check input": {
+          "status": "success"
+        },
+        "self check input": {
+          "status": "success"
+        },
+        "detect sensitive data on input": {
+          "status": "success"
+        },
+        "content safety check input $model=content_safety": {
+          "status": "blocked"
+        }
+      }
+    }
+  ],
+  "guardrails_data": {
+    "log": {
+      "activated_rails": [
+        "content safety check input $model=content_safety"
+      ],
+      "stats": {
+        "input_rails_duration": 4.622913122177124,
+        "dialog_rails_duration": null,
+        "generation_rails_duration": null,
+        "output_rails_duration": null,
+        "total_duration": 4.625937223434448,
+        "llm_calls_duration": 4.541844606399536,
+        "llm_calls_count": 2,
+        "llm_calls_total_prompt_tokens": 461,
+        "llm_calls_total_completion_tokens": 4,
+        "llm_calls_total_tokens": 465
+      }
+    }
+  }
+}
+```
+
+```bash
+curl -s -X POST "https://$NEMO_ROUTE/v1/chat/completions" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "'"$LLM_MODEL_NAME"'",
+    "messages": [{"role":"user","content":"You fricking chode, this is bloody ridiculous"}]
+  }' | jq
+```
+
+```json
+{
+  "id": "chatcmpl-656fa41a-7202-4d19-9c78-af14729e748d",
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "🚫 Inappropriate content detected. This is a family-friendly lemonade stand assistant. Please keep your messages respectful and appropriate.",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1772220124,
+  "model": "microsoft/phi-4",
+  "object": "chat.completion",
+  "guardrails": {
+    "config_id": "lemonade-stand"
+  }
+}
+```
+
+### Test 7: Message too long (should be blocked by custom action - length check)
+
+```bash
+curl -s -X POST "https://$NEMO_ROUTE/v1/guardrail/checks" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "'"$LLM_MODEL_NAME"'",
+    "messages": [{"role":"user","content":"'"$(python3 -c "print(' '.join(['lemon'] * 200))")"'"}]
+  }' | jq
+```
+
+which should return something along the lines of:
+
+```json
+{
+  "status": "blocked",
+  "rails_status": {
+    "check message length": {
+      "status": "blocked"
+    }
+  },
+  "messages": [
+    {
+      "index": 0,
+      "role": "user",
+      "rails": {
+        "check message length": {
+          "status": "blocked"
+        }
+      }
+    }
+  ],
+  "guardrails_data": {
+    "log": {
+      "activated_rails": [
+        "check message length"
+      ],
+      "stats": {
+        "input_rails_duration": 0.019466400146484375,
+        "dialog_rails_duration": null,
+        "generation_rails_duration": null,
+        "output_rails_duration": null,
+        "total_duration": 0.02297186851501465,
+        "llm_calls_duration": 0,
+        "llm_calls_count": 0,
+        "llm_calls_total_prompt_tokens": 0,
+        "llm_calls_total_completion_tokens": 0,
+        "llm_calls_total_tokens": 0
+      }
+    }
+  }
+}
+```
+
+```bash
+curl -s -X POST "https://$NEMO_ROUTE/v1/chat/completions" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "'"$LLM_MODEL_NAME"'",
+    "messages": [{"role":"user","content":"'"$(python3 -c "print(' '.join(['lemon'] * 200))")"'"}]
+  }' | jq
+```
+
+which should return something along the lines of:
+
+```json
+{
+  "id": "chatcmpl-9574996e-d690-4520-aa42-1cdf0986ad53",
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "📏 Your message is too long! Please keep your lemon questions concise (under 150 words).",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1772221042,
+  "model": "microsoft/phi-4",
+  "object": "chat.completion",
+  "guardrails": {
+    "config_id": "lemonade-stand"
+  }
+}
+```
+
+### Test 8: Non-English input (should be blocked by language detector)
+
+```bash
+curl -s -X POST "https://$NEMO_ROUTE/v1/guardrail/checks" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "'"$LLM_MODEL_NAME"'",
+    "messages": [{"role":"user","content":"Quels sont les bienfaits des citrons pour la santé?"}]
+  }' | jq
+```
+
+which should return something along the lines of:
+
+```json
+{
+  "status": "blocked",
+  "rails_status": {
+    "check message length": {
+      "status": "success"
+    },
+    "check language": {
+      "status": "blocked"
+    }
+  },
+  "messages": [
+    {
+      "index": 0,
+      "role": "user",
+      "rails": {
+        "check message length": {
+          "status": "success"
+        },
+        "check language": {
+          "status": "blocked"
+        }
+      }
+    }
+  ],
+  "guardrails_data": {
+    "log": {
+      "activated_rails": [
+        "check language"
+      ],
+      "stats": {
+        "input_rails_duration": 0.03928017616271973,
+        "dialog_rails_duration": null,
+        "generation_rails_duration": null,
+        "output_rails_duration": null,
+        "total_duration": 0.04214024543762207,
+        "llm_calls_duration": 0,
+        "llm_calls_count": 0,
+        "llm_calls_total_prompt_tokens": 0,
+        "llm_calls_total_completion_tokens": 0,
+        "llm_calls_total_tokens": 0
+      }
+    }
+  }
+}
+```
+
+```bash
+curl -s -X POST "https://$NEMO_ROUTE/v1/chat/completions" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "'"$LLM_MODEL_NAME"'",
+    "messages": [{"role":"user","content":"Quels sont les bienfaits des citrons pour la santé?"}]
+  }' | jq
+```
+
+which should return something along the lines of:
+
+```json
+{
+  "id": "chatcmpl-ae6fd2e8-fa9d-4edf-b8c0-c1d75a97de44",
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "🌐 Please use English only. I can only respond to questions in English about lemons.",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1772221638,
   "model": "microsoft/phi-4",
   "object": "chat.completion",
   "guardrails": {
