@@ -13,8 +13,8 @@ export INJECTION_GUARD_API_KEY="your-guard-api-key"
 
 Deploy with envsubst:
 ```bash
-envsubst < secret.yaml | oc apply -f -
-envsubst '${LLM_API_BASE} ${LLM_MODEL_NAME} ${LLM_API_KEY} ${INJECTION_GUARD_API_BASE} ${INJECTION_GUARD_MODEL_NAME} ${INJECTION_GUARD_API_KEY}' < configmap.yaml | oc apply -f -
+envsubst '${LLM_API_KEY} ${INJECTION_GUARD_API_KEY}' < secret.yaml | oc apply -f -
+envsubst '${LLM_API_BASE} ${LLM_MODEL_NAME} ${INJECTION_GUARD_API_BASE} ${INJECTION_GUARD_MODEL_NAME}' < configmap.yaml | oc apply -f -
 oc apply -f nemo.yaml
 ```
 

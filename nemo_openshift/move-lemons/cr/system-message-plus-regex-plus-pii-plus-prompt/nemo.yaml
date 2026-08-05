@@ -9,31 +9,11 @@ spec:
       configMaps:
         - lemonade-config
   env:
-    - name: LLM_API_BASE
-      valueFrom:
-        secretKeyRef:
-          name: lemonade-secret
-          key: api-base
-    - name: LLM_MODEL_NAME
-      valueFrom:
-        secretKeyRef:
-          name: lemonade-secret
-          key: model-name
     - name: LLM_API_KEY
       valueFrom:
         secretKeyRef:
           name: lemonade-secret
           key: api-key
-    - name: INJECTION_GUARD_API_BASE
-      valueFrom:
-        secretKeyRef:
-          name: lemonade-secret
-          key: injection-guard-api-base
-    - name: INJECTION_GUARD_MODEL_NAME
-      valueFrom:
-        secretKeyRef:
-          name: lemonade-secret
-          key: injection-guard-model-name
     - name: INJECTION_GUARD_API_KEY
       valueFrom:
         secretKeyRef:

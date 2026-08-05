@@ -15,26 +15,26 @@ data:
       # Main conversational model
       - type: main
         engine: openai
+        model: ${LLM_MODEL_NAME}
+        api_key_env_var: LLM_API_KEY
         parameters:
-          openai_api_base: ${LLM_API_BASE}
-          model_name: ${LLM_MODEL_NAME}
-          api_key: ${LLM_API_KEY}
+          base_url: ${LLM_API_BASE}
 
       # Guardrail model for input validation (prompt injection & jailbreak detection)
       - type: self_check_input
         engine: openai
+        model: ${INJECTION_GUARD_MODEL_NAME}
+        api_key_env_var: INJECTION_GUARD_API_KEY
         parameters:
-          openai_api_base: ${INJECTION_GUARD_API_BASE}
-          model_name: ${INJECTION_GUARD_MODEL_NAME}
-          api_key: ${INJECTION_GUARD_API_KEY}
+          base_url: ${INJECTION_GUARD_API_BASE}
 
       # Guardrail model for hate/abuse/profanity detection (input & output)
       - type: content_safety
         engine: openai
+        model: ${HAP_GUARD_MODEL_NAME}
+        api_key_env_var: HAP_GUARD_API_KEY
         parameters:
-          openai_api_base: ${HAP_GUARD_API_BASE}
-          model_name: ${HAP_GUARD_MODEL_NAME}
-          api_key: ${HAP_GUARD_API_KEY}
+          base_url: ${HAP_GUARD_API_BASE}
 
     # System instructions for main model
     instructions:

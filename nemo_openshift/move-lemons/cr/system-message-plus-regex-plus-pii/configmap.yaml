@@ -9,12 +9,13 @@ data:
     # Presidio: PII detection (input & output)
 
     models:
+      # Main conversational model
       - type: main
         engine: openai
+        model: ${LLM_MODEL_NAME}
+        api_key_env_var: LLM_API_KEY
         parameters:
-          openai_api_base: ${LLM_API_BASE}
-          model_name: ${LLM_MODEL_NAME}
-          api_key: ${LLM_API_KEY}
+          base_url: ${LLM_API_BASE}
 
     # System instructions - adapted from lemonade stand system prompt
     instructions:
